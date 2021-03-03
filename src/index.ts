@@ -3,6 +3,7 @@ import http from 'http';
 import { Server, Socket } from 'socket.io';
 import { MessageRecieved, MeetingStart } from './objects';
 import { register_commands } from './commands';
+import { register_custom_commands } from './custom_commands';
 
 const PORT = process.env.PORT || 9812;
 
@@ -27,6 +28,7 @@ function add_command(name: string, help: string, action: (m: MessageRecieved, s:
 }
 
 register_commands(add_command, () => command_help);
+register_custom_commands(add_command, () => command_help);
 
 server.on('connection', (socket: Socket) => {
     socket.on('meeting_start', (info: MeetingStart) => {
