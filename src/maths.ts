@@ -98,7 +98,7 @@ export function quadratic_nth_term(vals: number[]): string {
     } else {
         s = 'n^2'
     }
-    
+
     if (linear.every(v => v === 0)) {
         return s;
     } else {
@@ -129,4 +129,51 @@ export function prime_factors(val: number): number[] {
         }
     }
     return []; // This should never happen.
+}
+
+export function hcf(a: number, b: number): number {
+    if (a <= 0 || b <= 0) {
+        throw new InputError('Inputs must not be negative');
+    }
+
+    // short circuits
+    if (a === b) { // equal - the lcm is always the value
+        return a;
+    }
+    if (a % b === 0) { // a is divisible by b, so b is the maximum HCF
+        return b;
+    }
+    if (b % a === 0) { // b is divisible by a, so a is the maximum HCF
+        return a;
+    }
+
+    const a_factors = prime_factors(a);
+    const b_factors = prime_factors(b);
+
+    // More short circuits
+    if (a_factors.length === 0 || b_factors.length === 0) {
+        // One of the values is prime, and the other is NOT divisible by it, so the HCF must be 1
+        return 1;
+    }
+
+    const a_factors2 = a_factors.slice();
+    const common_factors: number[] = [];
+    for (let i = 0; i < a_factors.length; i++) {
+        const fact = a_factors[i];
+        if (b_factors.includes(fact)) {
+            b_factors.splice(b_factors.indexOf(fact), 1);
+            a_factors2.splice(a_factors2.indexOf(fact), 1);
+            common_factors.push(fact);
+        }
+    }
+
+    for (let i = 0; i < b_factors.length; i++) {
+        const fact = b_factors[i];
+        if (a_factors2.includes(fact)) {
+            common_factors.push(fact);
+            a_factors2.splice(a_factors2.indexOf(fact), 1);
+        }
+    }
+
+    return common_factors.reduce((a, b) => a * b);
 }

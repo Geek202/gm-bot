@@ -1,7 +1,7 @@
 import { CommandManager, GlobalContext } from './objects';
 import { format_millis, format_date } from './utils';
 import { evaluate } from 'mathjs';
-import { prime_factors, mean, infered_nth_term, linear_nth_term } from './maths';
+import { prime_factors, mean, infered_nth_term, linear_nth_term, hcf } from './maths';
 
 
 export function register_commands(command_manager: CommandManager, context: GlobalContext) {
@@ -81,4 +81,13 @@ export function register_commands(command_manager: CommandManager, context: Glob
 
         context.send_message(`Nth term: ${nth_term}`);
     });
+
+    command_manager.add_command('hcf', 'hcf <numbers...>', 'Find the Highest Common Factor of two numbers', (args: string[]) => {
+        if (args.length !== 2) {
+            context.send_message(`HCF requires exactly 2 numbers but ${args.length} were given!`);
+            return;
+        }
+
+        context.send_message(`The HCF of ${args[0]} and ${args[1]} is ${hcf(parseInt(args[0]), parseInt(args[1]))}`);
+    })
 }
