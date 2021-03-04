@@ -1,6 +1,7 @@
 import { AddCommand, Command } from './objects';
 import { format_millis, format_date } from './utils';
 import { evaluate } from 'mathjs';
+import { prime_factors } from './maths';
 
 export function register_commands(add_command: AddCommand, command: Command, help_getter: () => Map<string, string>) {
     add_command('help', 'You are here', (_, send_message) => {
@@ -35,6 +36,10 @@ export function register_commands(add_command: AddCommand, command: Command, hel
     });
 
     command('eval', 'Evaluate a mathmatical expression', (message, args, send_message) => {
+        if (args.length == 0) {
+            send_message('Usage: !eval <expression>');
+            return;
+        }
         try {
             const exp = args.join(' ');
             send_message(evaluate(exp));
@@ -42,4 +47,13 @@ export function register_commands(add_command: AddCommand, command: Command, hel
             send_message('Failed to evaluate expression: ' + JSON.stringify(e));
         }
     });
+
+    command('prime_factors', 'List the prime factors of a number', (message, args, send_message) => {
+        if (args.length == 0) {
+            send_message('Usage: !prime_factors <number>');
+            return;
+        }
+        const num = parseInt(args[0]);
+        send_message(`Prime factors of ${num} are ${prime_factors(num)}`);
+    })
 }
