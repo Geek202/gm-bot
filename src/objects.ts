@@ -18,4 +18,6 @@ interface MeetingDetails {
 
 type SendMessage = (message: string) => void;
 type CommandHandler = (message: MessageRecieved, send_message: SendMessage) => void;
+type NewCommandHandler = (message: MessageRecieved, args: string[], send_message: SendMessage) => void;
 export type AddCommand = (name: string, help: string, handler: CommandHandler) => void;
+export type Command = (name: string, help: string, handler: NewCommandHandler) => void;

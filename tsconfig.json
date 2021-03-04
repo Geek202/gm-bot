@@ -5,6 +5,7 @@
         "target": "es2019",
         "types": ["node"],
         "downlevelIteration": true,
+        "resolveJsonModule": true,
 
         "strict": true,
         "esModuleInterop": true,

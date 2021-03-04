@@ -1,0 +1,10 @@
+{
+    "allow_self": true,
+    "simple_commands": [
+        {
+            "name": "dab",
+            "help": "dab",
+            "message": "😠 why. just why."
+        }
+    ]
+}

@@ -4,6 +4,7 @@ import { Server, Socket } from 'socket.io';
 import { MessageRecieved, MeetingStart } from './objects';
 import { register_commands } from './commands';
 import { register_custom_commands } from './custom_commands';
+import { load_config } from './config';
 
 const PORT = process.env.PORT || 9812;
 
@@ -17,18 +18,29 @@ const server = new Server(httpServer, {
 
 app.use(express.json());
 
-type Command = (message: MessageRecieved, send_message: (message: string) => void) => void;
+type Command = (message: MessageRecieved, args: string[], send_message: (message: string) => void) => void;
 
 const commands: Map<string, Command> = new Map();
 const command_help: Map<string, string> = new Map();
 
+// Leave this as a wrapper so that old commands dont need to change.
 function add_command(name: string, help: string, action: (m: MessageRecieved, s: (m: string) => void) => void) {
+    command(name, help, (m, _, s) => action(m, s));
+}
+
+function command(name: string, help: string, action: Command) {
     commands.set(name, action);
     command_help.set(name, help);
 }
 
-register_commands(add_command, () => command_help);
-register_custom_commands(add_command, () => command_help);
+const config = load_config();
+
+config.simple_commands.forEach(({name, help, message}) => {
+    add_command(name, help, (_, send_message) => send_message(message));
+})
+
+register_commands(add_command, command, () => command_help);
+register_custom_commands(add_command, command, () => command_help);
 
 server.on('connection', (socket: Socket) => {
     socket.on('meeting_start', (info: MeetingStart) => {
@@ -38,7 +50,11 @@ server.on('connection', (socket: Socket) => {
     socket.emit('hello', 'o/');
 
     socket.on('chat_message_recieved', (message: MessageRecieved) => {
-        if (message.user === 'You') {
+        if (message.user === 'You' && !config.allow_self) {
+            return;
+        }
+
+        if (!message.message.startsWith('!')) {
             return;
         }
 
@@ -47,7 +63,7 @@ server.on('connection', (socket: Socket) => {
         const command = command_parts[0];
         if (commands.get(command) !== undefined) {
             const cmd = commands.get(command) as Command;
-            cmd(message, msg => socket.emit('send_message', msg));
+            cmd(message, command_parts.slice(1), msg => socket.emit('send_message', msg));
         }
     });
 });
