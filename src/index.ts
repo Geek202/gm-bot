@@ -1,10 +1,11 @@
 import express from 'express';
 import http from 'http';
 import { Server, Socket } from 'socket.io';
-import { MessageRecieved, MeetingStart } from './objects';
+import { MessageRecieved, MeetingStart, GlobalContext, CommandManager, CommandHandler } from './objects';
 import { register_commands } from './commands';
 import { register_custom_commands } from './custom_commands';
 import { load_config } from './config';
+import { Command } from 'commander';
 
 const PORT = process.env.PORT || 9812;
 
@@ -18,29 +19,47 @@ const server = new Server(httpServer, {
 
 app.use(express.json());
 
-type Command = (message: MessageRecieved, args: string[], send_message: (message: string) => void) => void;
-
-const commands: Map<string, Command> = new Map();
+const command_manager = new Command();
+command_manager.exitOverride();
+command_manager.configureOutput({});
 const command_help: Map<string, string> = new Map();
 
-// Leave this as a wrapper so that old commands dont need to change.
-function add_command(name: string, help: string, action: (m: MessageRecieved, s: (m: string) => void) => void) {
-    command(name, help, (m, _, s) => action(m, s));
+const global_context: GlobalContext = {
+    message: null,
+    send_message: () => { }
 }
 
-function command(name: string, help: string, action: Command) {
-    commands.set(name, action);
-    command_help.set(name, help);
-}
+command_manager.command('help')
+    .description('See a list of commands')
+    .action(() => {
+        let help_message = 'GM-Bot 🤖 v1.0.0\n\nHere is a list of my commands:';
+        for (const [name, help] of command_help.entries()) {
+            help_message += `\n!${name} -> ${help}`;
+        }
+        global_context.send_message(help_message);
+    });
 
 const config = load_config();
 
+const cmd_manager: CommandManager = {
+    add_command<T>(name: string, desc: string, help: string, handler: CommandHandler<T>) {
+        command_manager.command(desc)
+            .description(help)
+            .action((...args: any[]) => {
+                handler(args[0] as T);
+            });
+        command_help.set(name, help);
+    }
+}
+
 config.simple_commands.forEach(({name, help, message}) => {
-    add_command(name, help, (_, send_message) => send_message(message));
+    cmd_manager.add_command(name, name, help, () => {
+        global_context.send_message(message);
+    })
 })
 
-register_commands(add_command, command, () => command_help);
-register_custom_commands(add_command, command, () => command_help);
+register_commands(cmd_manager, global_context);
+register_custom_commands(cmd_manager, global_context);
 
 server.on('connection', (socket: Socket) => {
     socket.on('meeting_start', (info: MeetingStart) => {
@@ -58,12 +77,17 @@ server.on('connection', (socket: Socket) => {
             return;
         }
 
-        // console.log('message', JSON.stringify(message));
-        const command_parts = message.message.substring(1).split(' ');
-        const command = command_parts[0];
-        if (commands.get(command) !== undefined) {
-            const cmd = commands.get(command) as Command;
-            cmd(message, command_parts.slice(1), msg => socket.emit('send_message', msg));
+        const command_parts = message.message.substring(1).trim().split(' ');
+        command_parts.unshift('!', '!'); // we do this to trick commander into using the right things.
+
+        try {
+            global_context.send_message = message => socket.emit('send_message', message);
+            global_context.message = message;
+            command_manager.parse(command_parts);
+            global_context.message = null;
+            global_context.send_message = () => {};
+        } catch (e) {
+            socket.emit('send_message', 'Failed to run command:\n' + e.message);
         }
     });
 });

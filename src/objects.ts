@@ -16,8 +16,13 @@ interface MeetingDetails {
     member_count: number,
 }
 
-type SendMessage = (message: string) => void;
-type CommandHandler = (message: MessageRecieved, send_message: SendMessage) => void;
-type NewCommandHandler = (message: MessageRecieved, args: string[], send_message: SendMessage) => void;
-export type AddCommand = (name: string, help: string, handler: CommandHandler) => void;
-export type Command = (name: string, help: string, handler: NewCommandHandler) => void;
+export interface GlobalContext {
+    send_message(message: string): void;
+    message: MessageRecieved | null;
+}
+
+export type CommandHandler<T> = (args: T) => void;
+export interface CommandManager {
+    add_command<T>(name: string, desc: string, help: string, handler: CommandHandler<T>): void
+}
+// export type AddCommand<T> = (name: string, desc: string, help: string, handler: CommandHandler<T>) => void;
